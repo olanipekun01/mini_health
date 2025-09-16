@@ -1,128 +1,165 @@
-from django.db import models
 from django.contrib.auth.models import AbstractUser
-from django.contrib.auth.hashers import make_password, check_password
+from django.db import models
+from django.core.validators import RegexValidator
 import uuid
-from django.utils.timezone import now
+from rest_framework_simplejwt.tokens import RefreshToken
 
-# Create your models here.
-class CustomUser(AbstractUser):
-    USER_TYPE_CHOICES = (
-        ('nurse', 'nurse'),
-        ('doctor', 'doctor'),
-        ('him', 'him'),
-        ('pharm', 'pharm'),
-    )
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
-    user_type = models.CharField(max_length=15, choices=USER_TYPE_CHOICES)
+class User(AbstractUser):
+    ROLE_CHOICES = [
+        ('HIM', 'Health Information Management Officer'),
+        ('NURSE', 'Nurse'),
+        ('DOCTOR', 'Doctor'),
+        ('PHARMACY', 'Pharmacy'),
+    ]
+    username = models.CharField(max_length=100, unique=True, null=True, blank=True)
+    email = models.EmailField(max_length=100, unique=True, db_index=True)
+    first_name = models.CharField(max_length=100, blank=True, null=True)
+    last_name = models.CharField(max_length=100, blank=True, null=True)
+    login_token = models.CharField(max_length=6, blank=True, null=True)
+    refresh_token = models.CharField(max_length=255, blank=True, null =True)
 
-    def set_password(self, raw_password):
-        """Hash and set the password."""
-        self.password = make_password(raw_password)
-        
-    def check_password(self, raw_password):
-        """Check the password against the stored hashed password."""
-        return check_password(raw_password, self.password)
+    role = models.CharField(max_length=20, choices=ROLE_CHOICES)
+    phone = models.CharField(max_length=15, blank=True)
+    is_authorized = models.BooleanField(default=False)
 
-    def __str__(self):
-        return f"{self.username} ({self.stream})"
-
-class College(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    name = models.CharField(blank=True, null=True, max_length=500)
-
-    def __str__(self):
-        return self.name
-
-class Department(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    name = models.CharField(blank=True, null=True, max_length=500)
-
-    def __str__(self):
-        return self.name
-
-class Programme(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    name = models.CharField(max_length=100, null=True, blank=True)
-    duration = models.IntegerField(blank=True, null=True)
-    degree = models.CharField(blank=True, null=True, max_length=50)
-
-    def __str__(self):
-        return self.name
+    created_at = models.DateTimeField(auto_now_add=True)
     
-class Level(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    name = models.CharField(blank=True, null=True, max_length=80)
-
     def __str__(self):
-        return self.name
+        return f"{self.username} ({self.role})"
 
-class Semester(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    name = models.CharField(blank=True, null=True, max_length=80)
-    is_current = models.BooleanField(default=False)
-
-    def __str__(self):
-        return self.name
+    def tokens(self):
+        refresh = RefreshToken.for_user(self)
+        return {
+            'refresh': str(refresh),
+            'access': str(refresh.access_token),
+        }
 
 class Patient(models.Model):
-    STUDENTSTATUS_CHOICES = (
-        ('inprogress', 'In Progress'),
-        ('failed', 'Failed'),
-        ('graduated', 'Graduated'),
-    )
+    GENDER_CHOICES = [
+        ('M', 'Male'),
+        ('F', 'Female'),
+    ]
 
-    GENDER_CHOICES = (
-        ('f', 'Female'),
-        ('m', 'Male'),
-    )
+    RELIGION_CHOICES = [
+        ('CHRISTIAN', 'Christianity'),
+        ('MUSLIM', 'Muslim'),
+        ('OTHER', 'Other'),
+    ]
 
-    otherNames = models.CharField(blank=True, null=True, max_length=80)
-    surname = models.CharField(blank=True, null=True, max_length=80)
-    currentLevel = models.ForeignKey(Level, on_delete=models.CASCADE, related_name='currentLevel', null=True, default=1)
-    matricNumber = models.CharField(blank=True, null=True, max_length=30)
-    jambNumber = models.CharField(blank=True, null=True, max_length=30)
-    dateOfBirth = models.DateField()
-    gender = models.CharField(blank=True, null=True, max_length=15, choices=GENDER_CHOICES)
-    PhoneNumber = models.CharField(blank=True, null=True, max_length=15)
-    # college = models.ForeignKey(College, on_delete=models.CASCADE, null=True)
-    # department = models.ForeignKey(Department, on_delete=models.CASCADE, null=True)
-    # programme = models.ForeignKey(Programme, on_delete=models.CASCADE, related_name='students', blank=True, null=True)
-    # entrySession = models.CharField(blank=True, null=True, max_length=15,)
-    # currentSemester = models.ForeignKey(Semester, on_delete=models.SET_NULL, null=True, related_name='current_students')
-    # ... (keep other fields as is)
-    primaryEmail = models.CharField(blank=True, null=True, max_length=120)
-    studentEmail = models.CharField(blank=True, null=True, max_length=120)
-    bloodGroup = models.CharField(blank=True, null=True, max_length=20)
-    genoType = models.CharField(blank=True, null=True, max_length=20)
-    modeOfEntry = models.CharField(blank=True, null=True, max_length=50)
-    entryLevel =  models.ForeignKey(Level, on_delete=models.CASCADE,  null=True, default=1)
-    degree = models.CharField(blank=True, null=True, max_length=50)
-    nationality = models.CharField(blank=True, null=True, max_length=110)
-    stateOfOrigin = models.CharField(blank=True, null=True, max_length=110)
-    localGovtArea = models.CharField(blank=True, null=True, max_length=110)
-    passport = models.ImageField('image', default='images/placeholder.png', null=True, blank=True)
-    status = models.CharField(max_length=100, choices=STUDENTSTATUS_CHOICES, default='inprogress')
-
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
+    first_name = models.CharField(max_length=100)
+    last_name = models.CharField(max_length=100)
+    dob = models.DateField()
+    gender = models.CharField(max_length=1, choices=GENDER_CHOICES)
+    matric_no = models.CharField(max_length=15)
+    jamb_no = models.CharField(max_length=15)
+    address = models.TextField()
+    phone = models.CharField(max_length=15)
+    email = models.EmailField(blank=True, null=True)
+    xray_no = models.CharField(max_length=15)
+    religion = models.CharField(max_length=25, choices=RELIGION_CHOICES)
+    state_of_origin = models.CharField(max_length=50)
+    Tribe = models.CharField(max_length=60)
+    created_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='created_patients')
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+    
     def __str__(self):
-        return f"{self.surname} - {self.matricNumber} (Stream A)"
+        return f"{self.first_name} {self.last_name}"
 
 class CaseFolder(models.Model):
-    STATUS_CHOICES = (
-        ('open ', 'open'),
-        ('close', 'close'),
-    )
-    patient = models.ForeignKey(Patient, on_delete=models.CASCADE, related_name='patient' null=True)
-    status = models.CharField(blank=True, null=True, max_length=50, choices=STATUS_CHOICES)
-
-
-    def __str__(self):
-        return f"Disbursement #{self.id} by {self.user_name}"
+    patient = models.ForeignKey(Patient, on_delete=models.CASCADE, related_name='case_folders')
+    folder_number = models.CharField(max_length=50, unique=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    created_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='created_case_folders')
     
-class VitalsHistory(models.Model):
-    casefolder = models.ForeignKey(CaseFolder, on_delete=models.CASCADE, related_name='vitalhistory' null=True)
+    class Meta:
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f"Case Folder {self.folder_number} - {self.patient}"
 
-class Consultaion(models.Model):
-    casefolder = models.ForeignKey(CaseFolder, on_delete=models.CASCADE, related_name='consultation' null=True)
-    complaint = models.CharField(blank=True, null=True, max_length=110)
-    diagnosis = models.CharField(blank=True, null=True, max_length=110)
-    plan = models.CharField(blank=True, null=True, max_length=110)
+class MedicalHistory(models.Model):
+    case_folder = models.OneToOneField(CaseFolder, on_delete=models.CASCADE, related_name='medical_history')
+    hypertension = models.BooleanField(default=False)
+    measles = models.BooleanField(default=False)
+    chicken_pox = models.BooleanField(default=False)
+    tb = models.BooleanField(default=False)
+    diabetes = models.BooleanField(default=False)
+    yellow_fever = models.BooleanField(default=False)
+    sti = models.BooleanField(default=False)
+    kidney_disease = models.BooleanField(default=False)
+    liver_disease = models.BooleanField(default=False)
+    epilepsy = models.BooleanField(default=False)
+    sc_disease = models.BooleanField(default=False)
+    gd_ulcer = models.BooleanField(default=False)
+    rta_injury = models.BooleanField(default=False)
+    alcohol_smoking = models.BooleanField(default=False)
+    previous_ops = models.BooleanField(default=False)
+    schistosomiasis = models.BooleanField(default=False)
+    respiratory_disease = models.BooleanField(default=False)
+    mental_disease = models.BooleanField(default=False)
+    hiv = models.BooleanField(default=False)
+    allergies = models.BooleanField(default=False)
+    recorded_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='recorded_medicalhistory')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    def __str__(self):
+        return f"Medical History - {self.case_folder.patient}"
+
+class DiagnosisAdmission(models.Model):
+    case_folder = models.ForeignKey(CaseFolder, on_delete=models.CASCADE, related_name='diagnoses')
+    date = models.DateTimeField()
+    diagnosis = models.TextField()
+    date_of_admission = models.DateTimeField()
+    date_of_discharge = models.DateTimeField(blank=True, null=True)
+    recorded_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='recorded_diagnoses')
+    created_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='created_diagnoses')
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f"Diagnosis - {self.case_folder.patient} - {self.date.strftime('%Y-%m-%d')}"
+
+class VitalSigns(models.Model):
+    case_folder = models.ForeignKey(CaseFolder, on_delete=models.CASCADE, related_name='vital_signs')
+    blood_pressure = models.CharField(max_length=20)  # e.g., "120/80"
+    pulse = models.CharField(max_length=10)
+    weight = models.CharField(max_length=10)
+    height = models.CharField(max_length=10)
+    urine_albumin = models.CharField(max_length=20)
+    urine_sugar = models.CharField(max_length=20)
+    recorded_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='recorded_vitals')
+    recorded_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['-recorded_at']
+    
+    def __str__(self):
+        return f"Vitals - {self.case_folder.patient} - {self.recorded_at.strftime('%Y-%m-%d')}"
+
+class PatientNote(models.Model):
+    USER_TYPE_CHOICES = [
+        ('DOCTOR', 'Doctor'),
+        ('NURSE', 'Nurse'),
+    ]
+    
+    case_folder = models.ForeignKey(CaseFolder, on_delete=models.CASCADE, related_name='notes')
+    surname = models.CharField(max_length=100)
+    other_names = models.CharField(max_length=200)
+    date = models.DateTimeField()
+    notes = models.TextField()
+    user_type = models.CharField(max_length=10, choices=USER_TYPE_CHOICES)
+    recorded_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='recorded_notes')
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f"Note - {self.case_folder.patient} - {self.date.strftime('%Y-%m-%d')}"
