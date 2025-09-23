@@ -91,6 +91,66 @@ class TokenLoginView(APIView):
         else:
             return Response({'detail': "Invalid token."}, status=status.HTTP_400_BAD_REQUEST)
 
+# class PasswordResetOTPEmailView(generics.CreateAPIView):
+#     serializer_class = PasswordResetSerializer
+
+
+#     def create(self, request, *args, **kwargs):
+#         serializer = self.get_serializer(data=request.data)
+#         serializer.is_valid(raise_exception=True)
+
+#         email = serializer.validated_data['email']
+#         data = serializer.save()
+
+#         # Generate a unique confirmation URL for your local server
+#         confirmation_url_password_reset = f'http://localhost:8000/reset-password-confirmation/?email={email}&otp={data["otp"]}'
+
+
+#         #send and email with OTP and the confirmation link
+#         subject = 'Password Reset OTP and Confirmation Link'
+#         message = f'Use this OTP to reset your password: {data["otp"]}\n\n'
+#         message += f'\n\nAlternatively, you can click on the link below to reset your password: \n{confirmation_url_password_reset}'
+
+
+#         from_email = 'webmaster@example.com'
+#         recipient_list = [email]
+
+#         send_mail(subject, message, from_email, recipient_list)
+
+#         return Response({'message': 'Password reset OTP and confirmation link sent successfully.'}, status=status.HTTP_200_OK)
+
+# class PasswordResetConfirmationView(DetailView):
+#     model = User
+#     template_name = 'password_reset_confirmation.html'
+#     context_object_name = 'user'
+
+
+#     def get_object(self, queryset=None):
+#         email = self.request.GET.get('email')
+#         otp = self.request.GET.get('otp')
+
+#         if not email or not otp:
+#             raise Http404("Invalid URL")
+
+#         user = User.objects.filter(email=email, login_token=otp).first()
+
+#         if user is None:
+#             raise Http404("Invalid OTP")
+        
+#         return user
+
+#     def post(self, request, *args, **kwargs):
+#         user = self.get_object()
+#         new_password = request.POST.get('password')
+
+#         # set the new password
+#         user.set_password(new_password)
+#         user.save()
+
+#         messages.success(request, 'Password reset successfully.')
+#         return redirect('app:login')
+
+
 # Create your views here.
 # @api_view(['POST'])
 # @permission_classes([permissions.AllowAny])

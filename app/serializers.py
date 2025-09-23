@@ -85,10 +85,12 @@ class LoginSerializer(serializers.ModelSerializer):
         if not user.is_authorized:
             raise AuthenticationFailed('Your account has not been approved by an admin')
 
+        serializer = UserSerializer(user)
         return {
             'email': user.email,
             'username': user.username,
-            'tokens': user.tokens()
+            'tokens': user.tokens(),
+            'user': serializer.data,
         }
 
 class LogoutSerializer(serializers.Serializer):
@@ -102,6 +104,25 @@ class LogoutSerializer(serializers.Serializer):
         except TokenError as e:
             # self.fail('bad_token')
             raise serializers.ValidationError(str(e))
+
+
+# class PasswordResetSerializer(serializers.Serializer):
+#     email = serializers.EmailField()
+
+#     def validate_email(self, value):
+#         user = User.objects.filter(email=value).first()
+#         if user is None:
+#             raise serializers.ValidationError("No user found with this email address.")
+#         return value
+
+#     def save(self):
+#         email = self.validated_data['email']
+#         user = User.objects.get(email=email)
+#         otp = get_random_string(length=6, allowed_chars='1234567890')
+#         user.login_token = otp
+#         user.save()
+#         return {'user': user, 'otp': otp}
+
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
